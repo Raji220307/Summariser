@@ -5,22 +5,11 @@ import os
 
 from PyPDF2 import PdfReader
 from docx import Document
-from PIL import Image
-import pytesseract
 
 # ---------------------------------------------------
 # Load environment variables
 # ---------------------------------------------------
 load_dotenv()
-
-# ---------------------------------------------------
-# Configure Tesseract path (WINDOWS FIX)
-# ---------------------------------------------------
-pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
-
-if not os.path.exists(pytesseract.pytesseract.tesseract_cmd):
-    st.error("❌ Tesseract OCR not found. Please install Tesseract.")
-    st.stop()
 
 # --------------------------------------------------
 # Initialize Groq client
@@ -36,8 +25,8 @@ st.write("Upload a test paper containing **questions and student answers** to ge
 show_response = st.checkbox("Show Full LLM Response (Debug Mode)")
 
 uploaded_file = st.file_uploader(
-    "Upload Test Paper (PDF, Word, Text, Image)",
-    type=["pdf", "docx", "txt", "png", "jpg", "jpeg"]
+    "Upload Test Paper (PDF, Word, Text)",
+    type=["pdf", "docx", "txt"]
 )
 
 max_marks = st.number_input(
@@ -48,7 +37,7 @@ max_marks = st.number_input(
 )
 
 # --------------------------------------------------
-# Text Extraction Function
+# Text Extraction Function (NO IMAGE / OCR)
 # --------------------------------------------------
 def extract_text(file):
     if file.type == "text/plain":
@@ -65,10 +54,6 @@ def extract_text(file):
     elif file.type == "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
         doc = Document(file)
         return "\n".join([p.text for p in doc.paragraphs])
-
-    elif file.type.startswith("image"):
-        image = Image.open(file)
-        return pytesseract.image_to_string(image)
 
     return ""
 
