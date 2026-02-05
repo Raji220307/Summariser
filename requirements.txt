@@ -1,0 +1,8 @@
+groq
+streamlit
+flask
+dotenv
+PyPDF2
+pytesseract
+python-docx
+pillow
