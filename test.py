@@ -8,14 +8,14 @@ from docx import Document
 from PIL import Image
 import pytesseract
 
-# --------------------------------------------------
+# ---------------------------------------------------
 # Load environment variables
-# --------------------------------------------------
+# ---------------------------------------------------
 load_dotenv()
 
-# --------------------------------------------------
+# ---------------------------------------------------
 # Configure Tesseract path (WINDOWS FIX)
-# --------------------------------------------------
+# ---------------------------------------------------
 pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
 
 if not os.path.exists(pytesseract.pytesseract.tesseract_cmd):
