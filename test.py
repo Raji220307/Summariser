@@ -22,8 +22,6 @@ client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 st.title("🧠 AI Test Paper Evaluation System")
 st.write("Upload a test paper containing **questions and student answers** to get automatic evaluation.")
 
-show_response = st.checkbox("Show Full LLM Response (Debug Mode)")
-
 uploaded_file = st.file_uploader(
     "Upload Test Paper (PDF, Word, Text)",
     type=["pdf", "docx", "txt"]
@@ -102,15 +100,11 @@ Provide the evaluation in a clear, structured format.
             evaluation = response.choices[0].message.content.strip()
 
             # --------------------------------------------------
-            # Display Results
+            # Display Results (Only Evaluation)
             # --------------------------------------------------
             st.success("📊 Evaluation Result")
             st.write(evaluation)
 
-            # Console output
+            # Console output (optional for developer)
             print("====== TEST PAPER EVALUATION ======")
             print(evaluation)
-
-            if show_response:
-                st.subheader("Full LLM Response")
-                st.json(response.model_dump())
