@@ -18,8 +18,11 @@ client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 # --------------------------------------------------
 # UI
 # --------------------------------------------------
-st.title("📄 ATS Resume Analyzer")
-st.write("Upload your resume and paste the job description to get ATS score and improvement tips.")
+st.title("📄 ATS Resume & Career Fit Analyzer")
+st.write(
+    "Upload your resume and paste a job description.\n"
+    "You will get ATS score, improvement tips, and suitable job roles."
+)
 
 uploaded_file = st.file_uploader(
     "Upload Resume (PDF / DOCX / TXT)",
@@ -27,7 +30,7 @@ uploaded_file = st.file_uploader(
 )
 
 job_description = st.text_area(
-    "Paste Job Description",
+    "Paste Target Job Description",
     height=200
 )
 
@@ -53,23 +56,29 @@ def extract_text(file):
     return ""
 
 # --------------------------------------------------
-# ATS Analysis
+# Analysis
 # --------------------------------------------------
-if st.button("Analyze Resume (ATS)"):
+if st.button("Analyze Resume & Career Fit"):
     if not uploaded_file or job_description.strip() == "":
         st.warning("⚠ Please upload resume and paste job description")
     else:
         resume_text = extract_text(uploaded_file)
 
         prompt = f"""
-You are an Applicant Tracking System (ATS) and senior HR recruiter.
+You are:
+- An ATS system
+- A senior HR recruiter
+- A career guidance expert
 
-Analyze the resume strictly for ATS compatibility.
+Analyze the resume and job description.
 
-Return the response ONLY in the following format:
+Respond ONLY in this format:
 
 ATS_SCORE:
 <number>/100
+
+CURRENT_JOB_FIT:
+<Is the candidate suitable for this job? Yes/Partial/No with reason>
 
 KEYWORD_MATCH:
 <percentage>%
@@ -78,19 +87,23 @@ MISSING_SKILLS:
 - skill 1
 - skill 2
 
-RESUME_STRENGTHS:
-- point 1
-- point 2
-
 ATS_FORMATTING_ISSUES:
 - issue 1
 - issue 2
 
-IMPROVEMENT_SUGGESTIONS:
-- Exact changes to make
+SUITABLE_JOB_ROLES:
+- Job Role 1 (reason)
+- Job Role 2 (reason)
+- Job Role 3 (reason)
+
+SKILLS_TO_LEARN:
+- Skill + why it matters
+- Skill + recommended level
+
+IMPROVEMENT_GUIDE:
+- How to rewrite experience points
 - Where to add keywords
-- How to rewrite bullet points
-- Formatting improvements
+- Formatting changes for ATS
 
 Resume:
 {resume_text}
@@ -102,15 +115,15 @@ Job Description:
         response = client.chat.completions.create(
             model="llama-3.1-8b-instant",
             messages=[{"role": "user", "content": prompt}],
-            max_tokens=700
+            max_tokens=800
         )
 
         analysis = response.choices[0].message.content.strip()
 
         # --------------------------------------------------
-        # Display CLEAN output
+        # Display structured output
         # --------------------------------------------------
-        st.success("📊 ATS Resume Evaluation")
+        st.success("📊 Resume Analysis Result")
 
         sections = analysis.split("\n\n")
 
@@ -118,6 +131,10 @@ Job Description:
             if section.startswith("ATS_SCORE"):
                 st.subheader("📌 ATS Score")
                 st.write(section.replace("ATS_SCORE:", "").strip())
+
+            elif section.startswith("CURRENT_JOB_FIT"):
+                st.subheader("🎯 Current Job Suitability")
+                st.write(section.replace("CURRENT_JOB_FIT:", "").strip())
 
             elif section.startswith("KEYWORD_MATCH"):
                 st.subheader("🔑 Keyword Match")
@@ -127,14 +144,18 @@ Job Description:
                 st.subheader("❌ Missing Skills")
                 st.write(section.replace("MISSING_SKILLS:", "").strip())
 
-            elif section.startswith("RESUME_STRENGTHS"):
-                st.subheader("✅ Resume Strengths")
-                st.write(section.replace("RESUME_STRENGTHS:", "").strip())
-
             elif section.startswith("ATS_FORMATTING_ISSUES"):
                 st.subheader("⚠ ATS Formatting Issues")
                 st.write(section.replace("ATS_FORMATTING_ISSUES:", "").strip())
 
-            elif section.startswith("IMPROVEMENT_SUGGESTIONS"):
-                st.subheader("🚀 How to Improve Your Resume")
-                st.write(section.replace("IMPROVEMENT_SUGGESTIONS:", "").strip())
+            elif section.startswith("SUITABLE_JOB_ROLES"):
+                st.subheader("💼 Jobs That Suit You")
+                st.write(section.replace("SUITABLE_JOB_ROLES:", "").strip())
+
+            elif section.startswith("SKILLS_TO_LEARN"):
+                st.subheader("📚 Skills to Learn Next")
+                st.write(section.replace("SKILLS_TO_LEARN:", "").strip())
+
+            elif section.startswith("IMPROVEMENT_GUIDE"):
+                st.subheader("🚀 Resume Improvement Guide")
+                st.write(section.replace("IMPROVEMENT_GUIDE:", "").strip())
