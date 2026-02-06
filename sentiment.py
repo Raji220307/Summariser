@@ -2,37 +2,88 @@ import streamlit as st
 from groq import Groq
 from dotenv import load_dotenv
 import os
+import pandas as pd
 
+from PyPDF2 import PdfReader
+from docx import Document
+
+# --------------------------------------------------
 # Load environment variables
+# --------------------------------------------------
 load_dotenv()
 
+# --------------------------------------------------
 # Initialize Groq client
-api_key = os.getenv("GROQ_API_KEY")
-client = Groq(api_key=api_key)
+# --------------------------------------------------
+client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 
-# Page title
-st.title("Sentiment Analysis App 😊😐😡")
+# --------------------------------------------------
+# Streamlit UI
+# --------------------------------------------------
+st.title("🧠 Sentiment Analysis App (Text & Documents)")
+st.write("Analyze sentiment from **text input or uploaded files** (PDF, DOCX, CSV).")
 
-st.write("Enter a sentence and find out whether it is Positive, Negative, or Neutral.")
+# User input choice
+input_type = st.radio(
+    "Choose Input Type",
+    ["Text", "PDF", "DOCX", "CSV"]
+)
 
-# Text input
-user_text = st.text_area("Enter your text here:")
-
-# ✅ Checkbox should be OUTSIDE the button
 show_response = st.checkbox("Show/Hide Full LLM Response")
 
-# Button
+# --------------------------------------------------
+# Input Section
+# --------------------------------------------------
+text_data = ""
+
+if input_type == "Text":
+    text_data = st.text_area("Enter your text here:")
+
+elif input_type in ["PDF", "DOCX", "CSV"]:
+    uploaded_file = st.file_uploader(
+        f"Upload {input_type} file",
+        type=[input_type.lower()]
+    )
+
+    def extract_text(file):
+        if file is None:
+            return ""
+
+        if file.type == "application/pdf":
+            reader = PdfReader(file)
+            return "\n".join(
+                [page.extract_text() or "" for page in reader.pages]
+            )
+
+        elif file.type == "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
+            doc = Document(file)
+            return "\n".join([p.text for p in doc.paragraphs])
+
+        elif file.type == "text/csv":
+            df = pd.read_csv(file)
+            return " ".join(df.astype(str).values.flatten())
+
+        return ""
+
+    if uploaded_file:
+        text_data = extract_text(uploaded_file)
+
+# --------------------------------------------------
+# Sentiment Analysis
+# --------------------------------------------------
 if st.button("Analyze Sentiment"):
-    if user_text.strip() == "":
-        st.warning("Please enter some text")
+    if text_data.strip() == "":
+        st.warning("⚠ Please provide some text or upload a file")
     else:
         prompt = f"""
-        Analyze the sentiment of the following text.
-        Respond with only one word: Positive, Negative, or Neutral.
+Analyze the sentiment of the following content.
 
-        Text:
-        {user_text}
-        """
+Respond with only ONE word:
+Positive, Negative, or Neutral.
+
+Content:
+{text_data}
+"""
 
         response = client.chat.completions.create(
             model="llama-3.1-8b-instant",
@@ -40,17 +91,10 @@ if st.button("Analyze Sentiment"):
             max_tokens=10
         )
 
-        # Console output
-        print("FULL RESPONSE OBJECT:")
-        print(response)
-        print("\nMODEL OUTPUT:")
-        print(response.choices[0].message.content)
-
         sentiment = response.choices[0].message.content.strip()
 
-        st.success(f"Sentiment: **{sentiment}**")
+        st.success(f"📊 Sentiment: **{sentiment}**")
 
-        # ✅ Show only if checkbox is checked
         if show_response:
-            st.write("Full LLM Response:")
+            st.subheader("Full LLM Response")
             st.json(response.model_dump())
