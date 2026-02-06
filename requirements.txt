@@ -1,8 +1,6 @@
+streamlit==1.32.2
 groq
-streamlit
-flask
-dotenv
+python-dotenv
 PyPDF2
-pytesseract
 python-docx
 pillow
