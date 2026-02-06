@@ -5,28 +5,35 @@ import os
 from PyPDF2 import PdfReader
 from docx import Document
 
-# Load env
+# --------------------------------------------------
+# Load environment variables
+# --------------------------------------------------
 load_dotenv()
 
-# Groq client
+# --------------------------------------------------
+# Initialize Groq client
+# --------------------------------------------------
 client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 
-st.title("📄 AI Resume & ATS Analyzer")
-st.write("Upload resume and job description to get ATS score")
+# --------------------------------------------------
+# UI
+# --------------------------------------------------
+st.title("📄 ATS Resume Analyzer")
+st.write("Upload your resume and paste the job description to get ATS score and improvement tips.")
 
-# Upload resume
 uploaded_file = st.file_uploader(
     "Upload Resume (PDF / DOCX / TXT)",
     type=["pdf", "docx", "txt"]
 )
 
-# Job description
-job_description = st.text_area("Paste Job Description")
+job_description = st.text_area(
+    "Paste Job Description",
+    height=200
+)
 
-# Checkbox
-show_response = st.checkbox("Show Full LLM Response")
-
+# --------------------------------------------------
 # Text extraction
+# --------------------------------------------------
 def extract_text(file):
     if file.type == "text/plain":
         return file.read().decode("utf-8")
@@ -36,7 +43,7 @@ def extract_text(file):
         text = ""
         for page in reader.pages:
             if page.extract_text():
-                text += page.extract_text()
+                text += page.extract_text() + "\n"
         return text
 
     elif file.type == "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
@@ -45,33 +52,51 @@ def extract_text(file):
 
     return ""
 
-# Analyze button
+# --------------------------------------------------
+# ATS Analysis
+# --------------------------------------------------
 if st.button("Analyze Resume (ATS)"):
     if not uploaded_file or job_description.strip() == "":
-        st.warning("Please upload resume and job description")
+        st.warning("⚠ Please upload resume and paste job description")
     else:
         resume_text = extract_text(uploaded_file)
 
         prompt = f"""
-You are an ATS system and professional HR recruiter.
+You are an Applicant Tracking System (ATS) and senior HR recruiter.
 
-Analyze the resume against the job description.
+Analyze the resume strictly for ATS compatibility.
 
-Tasks:
-1. Calculate ATS match score (0–100)
-2. Identify keyword match percentage
-3. List missing important skills
-4. Mention resume strengths
-5. Identify ATS formatting issues
-6. Give suggestions to improve ATS score
+Return the response ONLY in the following format:
+
+ATS_SCORE:
+<number>/100
+
+KEYWORD_MATCH:
+<percentage>%
+
+MISSING_SKILLS:
+- skill 1
+- skill 2
+
+RESUME_STRENGTHS:
+- point 1
+- point 2
+
+ATS_FORMATTING_ISSUES:
+- issue 1
+- issue 2
+
+IMPROVEMENT_SUGGESTIONS:
+- Exact changes to make
+- Where to add keywords
+- How to rewrite bullet points
+- Formatting improvements
 
 Resume:
 {resume_text}
 
 Job Description:
 {job_description}
-
-Respond in a structured and clear format.
 """
 
         response = client.chat.completions.create(
@@ -80,17 +105,36 @@ Respond in a structured and clear format.
             max_tokens=700
         )
 
-        result = response.choices[0].message.content
+        analysis = response.choices[0].message.content.strip()
 
-        st.success("📊 ATS Resume Analysis")
-        st.write(result)
+        # --------------------------------------------------
+        # Display CLEAN output
+        # --------------------------------------------------
+        st.success("📊 ATS Resume Evaluation")
 
-        # Console output
-        print("ATS ANALYSIS RESULT:")
-        print(result)
+        sections = analysis.split("\n\n")
 
-        if show_response:
-            st.json(response.model_dump())
+        for section in sections:
+            if section.startswith("ATS_SCORE"):
+                st.subheader("📌 ATS Score")
+                st.write(section.replace("ATS_SCORE:", "").strip())
 
+            elif section.startswith("KEYWORD_MATCH"):
+                st.subheader("🔑 Keyword Match")
+                st.write(section.replace("KEYWORD_MATCH:", "").strip())
 
+            elif section.startswith("MISSING_SKILLS"):
+                st.subheader("❌ Missing Skills")
+                st.write(section.replace("MISSING_SKILLS:", "").strip())
 
+            elif section.startswith("RESUME_STRENGTHS"):
+                st.subheader("✅ Resume Strengths")
+                st.write(section.replace("RESUME_STRENGTHS:", "").strip())
+
+            elif section.startswith("ATS_FORMATTING_ISSUES"):
+                st.subheader("⚠ ATS Formatting Issues")
+                st.write(section.replace("ATS_FORMATTING_ISSUES:", "").strip())
+
+            elif section.startswith("IMPROVEMENT_SUGGESTIONS"):
+                st.subheader("🚀 How to Improve Your Resume")
+                st.write(section.replace("IMPROVEMENT_SUGGESTIONS:", "").strip())
